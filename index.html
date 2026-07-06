@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>PetGO 🐾</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght=400;600;700;800;900&family=Inter:wght=400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --coral:#FF5A3C;--yellow:#FFD93D;--mint:#E8F8F0;--dark:#1A1A2E;
+  --gray:#6B7280;--light:#F9FAFB;--white:#FFFFFF;--red:#EF4444;
+  --green:#22C55E;--blue:#3B82F6;--orange:#F97316;
+  --shadow:0 4px 20px rgba(0,0,0,0.08);--radius:16px;
+}
+body{font-family:'Inter',sans-serif;background:var(--light);color:var(--dark);min-height:100vh;overflow-x:hidden}
+h1,h2,h3,h4{font-family:'Nunito',sans-serif}
+button{cursor:pointer;font-family:'Inter',sans-serif;border:none;outline:none}
+input,textarea,select{font-family:'Inter',sans-serif;outline:none;font-size:16px}
+
+/* NAV */
+nav{background:var(--white);box-shadow:var(--shadow);position:sticky;top:0;z-index:100;padding:0 16px}
+.nav-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:64px;gap:10px}
+.logo{font-family:'Nunito',sans-serif;font-size:24px;font-weight:900;color:var(--coral);letter-spacing:-1px;display:flex;align-items:center;gap:6px;cursor:pointer;flex-shrink:0}
+.logo span{color:var(--dark)}
+.nav-tabs{display:flex;gap:4px;overflow-x:auto;scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
+.nav-tabs::-webkit-scrollbar{display:none}
+.nav-tab{padding:8px 12px;border-radius:10px;font-size:13px;font-weight:600;background:none;color:var(--gray);transition:all .2s;white-space:nowrap;display:flex;align-items:center}
+.nav-tab:hover{background:var(--mint);color:var(--dark)}
+.nav-tab.active{background:var(--coral);color:var(--white)}
+.nav-user{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.nav-username{font-weight:700;font-size:13px;color:var(--dark);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn-logout{padding:6px 12px;border-radius:10px;background:var(--light);color:var(--gray);font-size:12px;font-weight:600;transition:all .2s;white-space:nowrap}
+.btn-logout:hover{background:var(--red);color:var(--white)}
+
+/* PAGES */
+.page{display:none;max-width:1100px;margin:0 auto;padding:16px 12px}
+.page.active{display:block}
+
+/* AUTH */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#fff5f3 0%,#e8f8f0 100%);padding:16px}
+.auth-card{background:var(--white);border-radius:24px;box-shadow:0 8px 40px rgba(255,90,60,.12);padding:24px 16px;width:100%;max-width:420px}
+.auth-logo{font-family:'Nunito',sans-serif;font-size:32px;font-weight:900;color:var(--coral);text-align:center;margin-bottom:8px}
+.auth-tagline{text-align:center;color:var(--gray);font-size:13px;margin-bottom:20px}
+.auth-tabs{display:flex;background:var(--light);border-radius:12px;padding:4px;margin-bottom:24px}
+.auth-tab{flex:1;padding:10px;font-size:13px;font-weight:700;color:var(--gray);background:none;border-radius:10px;transition:all .2s}
+.auth-tab.active{background:var(--white);color:var(--coral);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:13px;font-weight:600;color:var(--dark);margin-bottom:6px}
+.form-input, .form-select{width:100%;padding:12px;border:2px solid #E5E7EB;border-radius:12px;font-size:15px;transition:border-color .2s;background:var(--white)}
+.form-input:focus, .form-select:focus{border-color:var(--coral)}
+.btn-primary{width:100%;padding:14px;border-radius:12px;background:var(--coral);color:var(--white);font-size:15px;font-weight:800;font-family:'Nunito',sans-serif;transition:all .2s;box-shadow:0 4px 14px rgba(255,90,60,.3);display:block;text-align:center;text-decoration:none}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,90,60,.4)}
+
+/* CARDS & FILTERS */
+.filters-wrap{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px;margin-bottom:16px}
+.filters-row{display:flex;flex-wrap:nowrap;gap:6px;align-items:center;overflow-x:auto;padding-bottom:4px;margin-top:10px}
+.filters-row::-webkit-scrollbar{display:none}
+.filter-btn{padding:8px 14px;border-radius:30px;font-size:12px;font-weight:700;background:var(--light);color:var(--gray);border:2px solid transparent;transition:all .2s;font-family:'Nunito',sans-serif;white-space:nowrap}
+.filter-btn.active{background:var(--coral);color:var(--white);border-color:var(--coral)}
+.search-bar{display:flex;gap:8px;flex-direction:column}
+.search-input{width:100%;padding:10px 14px;border:2px solid #E5E7EB;border-radius:30px;font-size:14px}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+.listing-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;cursor:pointer;transition:transform .25s,box-shadow .25s;position:relative;display:flex;flex-direction:column;justify-content:space-between}
+.card-img-wrap{height:120px;overflow:hidden;background:#f0f0f0;position:relative}
+.card-img-wrap img, .card-img-wrap video{width:100%;height:100%;object-fit:cover}
+.card-img-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:36px;background:linear-gradient(135deg,#ffe5e0,#e8f8f0)}
+.card-body{padding:10px;display:flex;flex-direction:column;flex:1;justify-content:space-between}
+.card-pet-type{display:inline-block;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:800;font-family:'Nunito',sans-serif;margin-bottom:4px;text-transform:uppercase;width:fit-content}
+.card-pet-type.dog{background:#FFF3E0;color:#F97316}
+.card-pet-type.cat{background:#F3E5F5;color:#9C27B0}
+.card-title{font-size:14px;font-weight:800;color:var(--dark);margin-bottom:2px;font-family:'Nunito',sans-serif;line-height:1.2;word-break:break-word}
+.card-breed{font-size:12px;color:var(--gray);margin-bottom:6px;word-break:break-word}
+.card-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:2px}
+.card-price{font-size:15px;font-weight:900;color:var(--coral);font-family:'Nunito',sans-serif}
+.card-price span{font-size:11px;font-weight:600}
+.strike-badge{position:absolute;top:6px;right:6px;background:var(--red);color:#fff;border-radius:6px;padding:2px 6px;font-size:10px;font-weight:800;z-index:2}
+.card-report-btn{position:absolute;top:6px;left:6px;background:rgba(255,255,255,0.9);box-shadow:0 2px 6px rgba(0,0,0,0.15);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;z-index:3;transition:transform 0.2s;}
+.card-report-btn:hover{transform:scale(1.1);background:#fff;}
+.stars-ui{color:var(--yellow);font-size:12px}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;overflow-y:auto;padding:8px;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);border-radius:20px;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative}
+.modal-header{padding:16px 16px 0;display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:18px;font-weight:900;font-family:'Nunito',sans-serif}
+.modal-close{width:32px;height:32px;border-radius:50%;background:var(--light);color:var(--gray);font-size:18px;display:flex;align-items:center;justify-content:center}
+.modal-close:hover{background:var(--red);color:#fff}
+.modal-body{padding:12px 16px 16px}
+.gallery-main img{width:100%; max-height:220px; object-fit:cover; border-radius:12px; margin-bottom:10px;}
+.listing-detail-price{font-size:20px; font-weight:900; color:var(--coral); font-family:'Nunito'; margin-bottom:8px;}
+.listing-detail-desc{font-size:14px; color:var(--dark); margin-bottom:14px; line-height:1.4; word-break:break-word}
+
+/* REVIEWS */
+.reviews-section{margin-top:20px;border-top:1px solid #eee;padding-top:14px}
+.review-item{background:var(--light);padding:10px;border-radius:10px;margin-bottom:8px;font-size:13px}
+.rating-stars-input{display:flex;gap:6px;font-size:24px;color:#ccc;margin-bottom:10px;cursor:pointer}
+.rating-stars-input span.active{color:var(--yellow)}
+
+/* CHAT */
+.chat-list{display:flex;flex-direction:column;gap:8px}
+.chat-item{background:var(--white);border-radius:12px;box-shadow:var(--shadow);padding:12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.chat-item-info{cursor:pointer;flex:1;word-break:break-word}
+.chat-window{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);height:78vh;display:flex;flex-direction:column}
+.chat-header{padding:12px;border-bottom:2px solid var(--light);display:flex;align-items:center;gap:8px}
+.chat-messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.msg{max-width:85%;padding:8px 12px;border-radius:14px;font-size:14px;position:relative;word-break:break-word}
+.msg.mine{align-self:flex-end;background:var(--coral);color:#fff;border-bottom-right-radius:4px}
+.msg.theirs{align-self:flex-start;background:var(--light);color:var(--dark);border-bottom-left-radius:4px}
+.chat-input-row{display:flex;gap:6px;padding:8px;border-top:1px solid #eee}
+
+/* ADMIN Sub-tabs */
+.admin-tabs{display:flex;gap:6px;margin-bottom:12px;border-bottom:2px solid #eee;padding-bottom:6px}
+.admin-tab-btn{padding:8px 12px;background:var(--light);border-radius:8px;font-size:13px;font-weight:700;color:var(--gray)}
+.admin-tab-btn.active{background:var(--dark);color:#fff}
+.admin-card-item{background:var(--white);border-radius:12px;padding:12px;box-shadow:var(--shadow);margin-bottom:10px;display:flex;flex-direction:column;gap:8px;word-break:break-word}
+.status-tag{font-size:11px;padding:2px 6px;border-radius:6px;font-weight:bold}
+.status-tag.online{background:#E8F8F0;color:#22C55E}
+.status-tag.offline{background:#F3F4F6;color:#6B7280}
+.ad-card{background:#fff; border: 2px solid #E5E7EB; padding:12px; border-radius:16px; box-shadow:var(--shadow); word-break:break-word;}
+.ad-media-container {display:flex; gap:6px; overflow-x:auto; margin-bottom:8px; padding-bottom:4px;}
+.ad-media-container img, .ad-media-container video {width:100px; height:75px; object-fit:cover; border-radius:8px; background:#eee; flex-shrink:0;}
+
+/* POPUP ADS */
+.popup-ad{position:fixed;bottom:16px;right:16px;max-width:280px;width:calc(100% - 32px);background:var(--white);border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.25);padding:12px;z-index:400;transform:translateX(130%);opacity:0;transition:transform .4s ease,opacity .4s ease;pointer-events:none}
+.popup-ad.show{transform:translateX(0);opacity:1;pointer-events:auto}
+.popup-ad-inner{position:relative}
+.popup-ad-close{position:absolute;top:-20px;right:-20px;width:26px;height:26px;border-radius:50%;background:var(--red);color:#fff;font-size:15px;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.25);display:none}
+@media(max-width:480px){.popup-ad{left:12px;right:12px;max-width:none;width:auto;bottom:12px}}
+
+/* REG CONTACT */
+.contact-send-row{display:flex;gap:8px}
+.contact-send-row .form-input{flex:1}
+.btn-send-code{width:auto;padding:0 12px;font-size:11px;font-weight:800;border-radius:12px;background:var(--coral);color:var(--white);white-space:nowrap;font-family:'Nunito',sans-serif}
+
+@media(max-width:768px){
+  nav{padding:0 8px}
+  .nav-inner{height:auto;flex-direction:column;padding:8px 0;gap:6px}
+  .nav-tabs{width:100%;justify-content:flex-start;padding:2px 0}
+  .nav-user{width:100%;justify-content:space-between;border-top:1px solid #F3F4F6;padding-top:6px}
+  .cards-grid{grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:8px}
+}
+</style>
+</head>
+<body>
+
+<div id="blockedScreen" class="auth-wrap" style="display:none; text-align:center; flex-direction:column; gap:16px;">
+  <div class="auth-card">
+    <h2 style="color:var(--red); font-family:'Nunito'; margin-bottom:10px;">🚫 Доступ обмежено</h2>
+    <p id="blockedReason" style="font-size:15px; margin-bottom:20px; color:var(--gray);"></p>
+    <button class="btn-logout" onclick="doLogout()" style="width:100%; padding:12px;">Вийти з акаунту</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="strikeModal" style="z-index: 300;">
+  <div class="modal" style="max-width:400px; text-align:center;">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--orange)">⚠️ Попередження від PetGO</div>
+      <button class="modal-close" onclick="closeStrikeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="strikeModalReason" style="font-size:14px; margin-bottom:16px; color:var(--dark); line-height:1.4;"></p>
+      <button class="btn-primary" onclick="closeStrikeModal()">Зрозуміло</button>
+    </div>
+  </div>
+</div>
+
+<div id="authPage" class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">🐾 PetGO</div>
+    <div class="auth-tagline">Знайди найкращого доглядача для свого улюбленця</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLoginBtn" onclick="switchAuth('login')">Увійти</button>
+      <button class="auth-tab" id="tabRegBtn" onclick="switchAuth('register')">Реєстрація</button>
+    </div>
+    <div id="loginForm">
+      <div class="form-group"><label>Нікнейм</label><input class="form-input" id="loginNick" placeholder="your_nickname"/></div>
+      <div class="form-group"><label>Пароль</label><input class="form-input" type="password" id="loginPass" placeholder="••••••••"/></div>
+      <div class="form-group"><label>Email або номер телефону <span style="font-weight:400;color:var(--gray)">(якщо реєструвались без цього — залиште порожнім)</span></label><input class="form-input" id="loginContact" placeholder="you@example.com або +380..."/></div>
+      <button class="btn-primary" onclick="doLogin()">Увійти</button>
+    </div>
+    <div id="registerForm" style="display:none">
+      <div class="form-group"><label>Нікнейм</label><input class="form-input" id="regNick" placeholder="your_nickname"/></div>
+      <div class="form-group"><label>Пароль</label><input class="form-input" type="password" id="regPass" placeholder="Мінімум 6 symbols"/></div>
+      <div class="form-group"><label>Підтвердити пароль</label><input class="form-input" type="password" id="regPass2" placeholder="Повторіть пароль"/></div>
+      <div class="form-group">
+        <label>Спосіб реєстрації</label>
+        <div class="auth-tabs" style="margin-bottom:0">
+          <button type="button" class="auth-tab active" id="regContactTypePhoneBtn" onclick="setRegContactType('phone')">📱 Телефон</button>
+          <button type="button" class="auth-tab" id="regContactTypeEmailBtn" onclick="setRegContactType('email')">✉️ Email</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label id="regContactLabel">Номер телефону</label>
+        <div class="contact-send-row">
+          <input class="form-input" id="regContact" placeholder="+380XXXXXXXXX"/>
+          <button type="button" class="btn-send-code" id="regSendCodeBtn" onclick="sendRegCode()">Надіслати SMS-код</button>
+        </div>
+      </div>
+      <div class="form-group" id="regCodeGroup" style="display:none">
+        <label>Код із SMS</label>
+        <input class="form-input" id="regCode" placeholder="Введіть код"/>
+      </div>
+      <div class="form-group" id="regEmailStatus" style="display:none">
+        <p style="font-size:13px;color:var(--gray);line-height:1.4;"></p>
+      </div>
+      <div id="recaptcha-container"></div>
+      <button class="btn-primary" onclick="doRegister()">Зареєструватись</button>
+    </div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <nav>
+    <div class="nav-inner">
+      <div class="logo" onclick="goTab('listings')">🐾 <span>Pet</span>GO</div>
+      <div class="nav-tabs">
+        <button class="nav-tab active" data-tab="listings" onclick="goTab('listings')">🏠 Оголошення</button>
+        <button class="nav-tab" data-tab="chats" onclick="goTab('chats')">💬 Чати</button>
+        <button class="nav-tab" data-tab="mylistings" onclick="goTab('mylistings')">📋 Мої</button>
+        <button class="nav-tab" data-tab="ads" onclick="goTab('ads')">📢 Реклама</button>
+        <button class="nav-tab admin-tab" data-tab="admin" onclick="goTab('admin')" style="display:none">🛡️ Адмін</button>
+      </div>
+      <div class="nav-user">
+        <span class="nav-username" id="navUsername"></span>
+        <button class="btn-logout" onclick="doLogout()">Вийти</button>
+      </div>
+    </div>
+  </nav>
+
+  <div id="tabListings" class="page active">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+      <div><h2 class="section-title" style="font-size:20px;">Оголошення 🐾</h2></div>
+      <button class="btn-primary" style="width:auto;padding:8px 14px; font-size:13px; border-radius:8px;" onclick="openCreateModal()">+ Створити</button>
+    </div>
+
+    <div class="filters-wrap">
+      <div class="search-bar">
+        <input class="search-input" id="searchInput" placeholder="🔍 Пошук за назвою або породою..." oninput="applyFilters()"/>
+        <div style="display:flex; gap:6px;">
+          <select class="form-select" id="filterSort" onchange="applyFilters()" style="padding:6px 10px; font-size:12px; border-radius:20px; flex:1;">
+            <option value="all">🌐 Усі оголошення</option>
+            <option value="new">🆕 Нові (до 1 дня)</option>
+            <option value="cheap">📉 Дешеві (до 50 грн)</option>
+            <option value="high">📈 Велика ціна</option>
+            <option value="rating">⭐ За оцінкою</option>
+          </select>
+        </div>
+      </div>
+      <div class="filters-row">
+        <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">🐾 Всі</button>
+        <button class="filter-btn" data-filter="dog" onclick="setFilter('dog')">🐶 Собаки</button>
+        <button class="filter-btn" data-filter="cat" onclick="setFilter('cat')">🐱 Коти</button>
+      </div>
+    </div>
+
+    <div class="cards-grid" id="listingsGrid"></div>
+  </div>
+
+  <div id="tabChats" class="page">
+    <h2 class="section-title">Повідомлення 💬</h2>
+    <div id="chatListView"><div class="chat-list" id="chatList" style="margin-top:12px"></div></div>
+    <div id="chatWindowView" style="display:none">
+      <div class="chat-window">
+        <div class="chat-header">
+          <button style="background:none;font-size:20px;padding:5px 10px;" onclick="closeChatWindow()">←</button>
+          <div>
+            <div class="chat-header-title" id="chatHeaderTitle" style="font-weight:bold; font-size:14px;"></div>
+            <div id="chatHeaderStatus" style="font-size:11px;"></div>
+          </div>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input-row">
+          <input class="chat-input" id="chatInput" style="flex:1; padding:10px 12px; border:2px solid #E5E7EB; border-radius:20px; font-size:14px;" placeholder="Написати..." onkeydown="if(event.key==='Enter')sendMsg()"/>
+          <button style="padding:10px 14px; background:var(--coral); color:#fff; border-radius:20px; font-size:13px; font-weight:bold;" onclick="sendMsg()">Топ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tabMylistings" class="page">
+    <h2 class="section-title">Мої оголошення 📋</h2>
+    <div id="myListingsContainer" class="cards-grid" style="margin-top:14px"></div>
+  </div>
+
+  <div id="tabAds" class="page">
+    <div id="userAdActionBlock" style="margin-bottom:16px; text-align:center;">
+      <a href="https://t.me/youtuber_simdom" target="_blank" class="btn-primary" style="display:inline-block; width:100%; padding:12px; font-size:14px; background:var(--blue); box-shadow:0 4px 14px rgba(59,130,246,0.3);">🚀 Замовити рекламу в ТГ @youtuber_simdom</a>
+    </div>
+    
+    <div id="adminAdFormBlock" class="filters-wrap" style="display:none; margin-bottom:16px;">
+      <h4 style="margin-bottom:10px; font-family:'Nunito'; color:var(--coral);">🛡️ Створення реклами (Тільки для simdom)</h4>
+      <div class="form-group"><label>Назва акції/бренду *</label><input class="form-input" id="adTitle" placeholder="Супер пропозиція"/></div>
+      <div class="form-group"><label>Опис реклами *</label><input class="form-input" id="adDesc" placeholder="Деталі рекламної акції..."/></div>
+      <div class="form-group"><label>Посилання реклами</label><input class="form-input" id="adLink" placeholder="https://..."/></div>
+      <div class="form-group">
+        <label>Фотографії (до 10 шт)</label>
+        <input type="file" id="adPhotosInput" multiple accept="image/*" onchange="previewAdPhotos(event)"/>
+        <div id="adPhotosPreview" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;"></div>
+      </div>
+      <div class="form-group">
+        <label>Відео (1 шт, до 40 секунд)</label>
+        <input type="file" id="adVideoInput" accept="video/*" onchange="previewAdVideo(event)"/>
+        <div id="adVideoPreview" style="margin-top:6px;"></div>
+      </div>
+      <button class="btn-primary" style="padding:10px 14px;" onclick="createAd()">🚀 Опублікувати офіційну рекламу</button>
+    </div>
+
+    <h3 style="font-family:'Nunito'; margin-bottom:10px; font-size:16px;">Рекламні блоки:</h3>
+    <div style="display:flex; flex-direction:column; gap:12px;" id="adsGrid"></div>
+  </div>
+
+  <div id="tabAdmin" class="page">
+    <h2 class="section-title">🛡️ Admin panel</h2>
+    <div class="admin-tabs">
+      <button class="admin-tab-btn active" id="admTabUsers" onclick="switchAdminSubTab('users')">👤 Користувачі</button>
+      <button class="admin-tab-btn" id="admTabReports" onclick="switchAdminSubTab('reports')">🚨 Скарги (<span id="reportsCount">0</span>)</button>
+    </div>
+    
+    <div id="adminUsersSection">
+      <div id="adminUsersList"></div>
+    </div>
+    <div id="adminReportsSection" style="display:none">
+      <div id="adminReportsList"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="createModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Нове оголошення 🐾</div>
+      <button class="modal-close" onclick="closeModal('createModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>Назва послуги *</label><input class="form-input" id="newTitle"/></div>
+      <div class="form-row" style="display:flex; gap:8px; margin-bottom:12px;">
+        <div class="form-group" style="flex:1; margin-bottom:0;">
+          <label>Тип *</label>
+          <select class="form-select" id="newPetType"><option value="dog">🐶 Собака</option><option value="cat">🐱 Кіт</option></select>
+        </div>
+        <div class="form-group" style="flex:1; margin-bottom:0;"><label>Порода *</label><input class="form-input" id="newBreed"/></div>
+      </div>
+      <div class="form-group"><label>Ціна (грн/год) *</label><input class="form-input" type="number" id="newPrice"/></div>
+      <div class="form-group"><label>Опис</label><textarea class="form-input" id="newDesc" rows="2"></textarea></div>
+      <div class="form-group">
+        <label>Фото</label>
+        <input type="file" id="photoInput" multiple accept="image/*" onchange="previewPhotos(event)"/>
+        <div id="photoPreviewGrid" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px"></div>
+      </div>
+      <button class="btn-primary" onclick="createListing()">Опублікувати</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="detailTitle">Деталі</div>
+      <button class="modal-close" onclick="closeModal('detailModal')">×</button>
+    </div>
+    <div class="modal-body" id="detailBody"></div>
+  </div>
+</div>
+
+<div id="popupAd" class="popup-ad"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, push, onValue, update, remove }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import {
+  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
+  onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+// Конфігурація Firebase зберігається у Base64, щоб вона не "світилась" відкритим
+// текстом при побіжному перегляді вихідного коду сторінки (простий засіб проти
+// автоматичного сканування/копіювання ключів ботами). Це НЕ є повноцінним захистом:
+// справжня безпека даних Firebase забезпечується виключно правилами доступу
+// (Firebase Security Rules) на стороні бекенду, оскільки apiKey у клієнтських
+// застосунках Firebase в принципі є публічним і призначений лише для ідентифікації проєкту.
+const _fbc = {
+  a: "QUl6YVN5Q3RzZUh2QzFaeUNTRGFaZHhqQ0dmQ2RuNkl1X1Qzc19J",
+  b: "cGV0Z28tNDlmOGYuZmlyZWJhc2VhcHAuY29t",
+  c: "aHR0cHM6Ly9wZXRnby00OWY4Zi1kZWZhdWx0LXJ0ZGIuZmlyZWJhc2Vpby5jb20v",
+  d: "cGV0Z28tNDlmOGY=",
+  e: "cGV0Z28tNDlmOGYuZmlyZWJhc2VzdG9yYWdlLmFwcA==",
+  f: "MjA4ODcyNTg5NjUz",
+  g: "MToyMDg4NzI1ODk2NTM6d2ViOjhlZWI5YTJlYmNjYWYyZjNmZDA3ZGM=",
+  h: "Ry0xMDEwMktNU0dF"
+};
+const _d = (s) => atob(s);
+const firebaseConfig = {
+  apiKey: _d(_fbc.a),
+  authDomain: _d(_fbc.b),
+  databaseURL: _d(_fbc.c),
+  projectId: _d(_fbc.d),
+  storageBucket: _d(_fbc.e),
+  messagingSenderId: _d(_fbc.f),
+  appId: _d(_fbc.g),
+  measurementId: _d(_fbc.h)
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
+
+let currentUser = null;
+let allListings = {};
+let allUsers = {};
+let allAds = {};
+let allChats = {};
+let allReports = {};
+let currentFilterVal = 'all';
+let newPhotos = [];
+let currentChatId = null;
+let onlineInterval = null;
+let selectedRating = 5;
+
+let adPhotosData = [];
+let adVideoData = null;
+
+let regContactType = 'phone';
+
+let popupAdInterval = null;
+let popupAdCloseTimeout = null;
+let lastPopupAdId = null;
+
+/* ======================= АВТЕНТИФІКАЦІЯ: FIREBASE AUTHENTICATION =======================
+   Власна система паролів (PBKDF2-хешування, солі, токени сесій) повністю видалена.
+   Реєстрація, вхід, вихід, підтвердження email і відновлення пароля тепер повністю
+   делегуються Firebase Authentication (createUserWithEmailAndPassword,
+   signInWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification,
+   sendPasswordResetEmail). Firebase сам відповідає за безпечне зберігання паролів
+   та за сесію користувача (SDK зберігає стан входу самостійно, без ручних токенів
+   у localStorage). */
+
+/* ======================= БЕЗПЕКА: ЗАХИСТ ВІД XSS ======================= */
+// Екранування будь-якого тексту, введеного користувачами, перед вставкою в innerHTML.
+// Це блокує ін'єкцію тегів <script>, onerror=, <img>, тощо в нікнеймах, описах,
+// повідомленнях чату, відгуках, скаргах і т.д.
+function escapeHtml(str){
+  if(str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+// Дозволяємо посилання лише за протоколами http/https, щоб унеможливити javascript: URI.
+function sanitizeUrl(url){
+  if(!url) return '';
+  try {
+    const u = new URL(url, window.location.href);
+    if(u.protocol === 'http:' || u.protocol === 'https:') return u.href;
+  } catch(e){}
+  return '';
+}
+
+/* ======================= БЕЗПЕКА: ВАЛІДАЦІЯ ВВОДУ ======================= */
+function isValidNick(nick){
+  return /^[a-zA-Z0-9_]{3,20}$/.test(nick);
+}
+function isValidPassword(pass){
+  return typeof pass === 'string' && pass.length >= 6 && pass.length <= 128;
+}
+function isValidEmail(email){
+  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+function clampText(str, maxLen){
+  return String(str || '').slice(0, maxLen);
+}
+
+/* ======================= БЕЗПЕКА: АНТИ-СПАМ (RATE LIMIT) ======================= */
+// Мінімум 3 секунди між повторними діями одного типу (створення оголошень/реклами,
+// відправка повідомлень, скарг, відгуків), щоб ускладнити спам/флуд бази даних.
+const _lastActionAt = {};
+function throttled(actionKey, minIntervalMs = 3000){
+  const now = Date.now();
+  const last = _lastActionAt[actionKey] || 0;
+  if(now - last < minIntervalMs) return false;
+  _lastActionAt[actionKey] = now;
+  return true;
+}
+
+/* ======================= БЕЗПЕКА: ПЕРЕВІРКА РОЗМІРУ ФАЙЛІВ ======================= */
+const MAX_PHOTO_BYTES = 3 * 1024 * 1024;   // 3 МБ на фото
+const MAX_VIDEO_BYTES = 20 * 1024 * 1024;  // 20 МБ на відео
+
+// Автовхід і перевірка стану авторизації повністю делеговані Firebase Authentication.
+// onAuthStateChanged спрацьовує одразу при завантаженні сторінки (якщо Firebase SDK
+// відновив попередню сесію користувача) і після кожного входу/виходу.
+let _authHandledOnce = false;
+onAuthStateChanged(auth, async (fbUser) => {
+  if(!fbUser){
+    currentUser = null;
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('blockedScreen').style.display = 'none';
+    document.getElementById('authPage').style.display = 'flex';
+    _authHandledOnce = true;
+    return;
+  }
+
+  // Заборона входу, поки email не підтверджено: примусово виходимо з акаунта
+  // і показуємо повідомлення про необхідність підтвердження.
+  if(!fbUser.emailVerified){
+    await signOut(auth);
+    if(_authHandledOnce){
+      alert('Будь ласка, підтвердіть свій email перед входом. Ми надіслали лист на ' + fbUser.email + '. Перевірте пошту (в тому числі папку "Спам").');
+    }
+    _authHandledOnce = true;
+    return;
+  }
+
+  try {
+    const snap = await get(ref(db, 'Users/' + fbUser.uid));
+    if(!snap.exists()){
+      alert('Профіль користувача не знайдено. Зверніться до підтримки.');
+      await signOut(auth);
+      _authHandledOnce = true;
+      return;
+    }
+    checkBanAndLogin(fbUser.uid, snap.val());
+  } catch(e){
+    alert('Не вдалося завантажити профіль: ' + e.message);
+  }
+  _authHandledOnce = true;
+});
+
+// Пункт 10 ТЗ вимагає можливості відновлення пароля, для якої в наявній розмітці
+// немає елемента — тому єдина потрібна для цього кнопка додається програмно (без
+// редагування самого HTML-файлу), одразу під формою входу.
+window.addEventListener('DOMContentLoaded', () => {
+  const loginForm = document.getElementById('loginForm');
+  if(loginForm && !document.getElementById('forgotPasswordLink')){
+    const link = document.createElement('button');
+    link.type = 'button';
+    link.id = 'forgotPasswordLink';
+    link.textContent = 'Забули пароль?';
+    link.style.cssText = 'background:none;border:none;color:var(--coral);font-size:12px;font-weight:600;margin-top:10px;width:100%;text-align:center;cursor:pointer;';
+    link.onclick = () => window.doForgotPassword();
+    loginForm.appendChild(link);
+  }
+});
+
+// Мапа нікнейм -> {uid,email} у публічно-читабельному вузлі 'Nicknames' потрібна,
+// щоб форма входу (яка запитує саме нікнейм, а не email) могла визначити, з яким
+// email потрібно викликати signInWithEmailAndPassword(). Сам email вважається
+// несекретним профільним полем (це узгоджено з переліком полів у Users/{uid}).
+async function findAccountByNickname(nick){
+  const snap = await get(ref(db, 'Nicknames/' + nick.toLowerCase()));
+  return snap.exists() ? snap.val() : null;
+}
+
+function checkBanAndLogin(uid, user) {
+  const now = Date.now();
+  if(user.banned || (user.banUntil && user.banUntil > now)) {
+    document.getElementById('authPage').style.display = 'none';
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('blockedScreen').style.display = 'flex';
+    let expireStr = user.banned ? "Назавжди" : new Date(user.banUntil).toLocaleString('uk-UA');
+    document.getElementById('blockedReason').innerHTML = `<b>Причина:</b> ${escapeHtml(user.banReason || 'Не вказана')}<br><br><b>Термін дії:</b> ${escapeHtml(expireStr)}`;
+    return;
+  }
+  loginSuccess(uid, user);
+}
+
+window.switchAuth = function(mode){
+  document.getElementById('tabLoginBtn').classList.toggle('active', mode==='login');
+  document.getElementById('tabRegBtn').classList.toggle('active', mode==='register');
+  document.getElementById('loginForm').style.display = mode==='login'?'':'none';
+  document.getElementById('registerForm').style.display = mode==='register'?'':'none';
+  if(mode==='register'){ setRegContactType('phone'); document.getElementById('regContact').value=''; }
+};
+
+// Реєстрація/вхід у Firebase Authentication можливі лише за email+паролем
+// (createUserWithEmailAndPassword / signInWithEmailAndPassword). Тому вкладка
+// "Телефон" залишена в інтерфейсі (дизайн не змінювався), але веде користувача
+// до пояснення, що потрібно скористатись вкладкою Email — власної SMS-перевірки
+// та власного зберігання пароля для телефону більше немає.
+window.setRegContactType = function(type){
+  regContactType = type;
+  document.getElementById('regContactTypePhoneBtn').classList.toggle('active', type==='phone');
+  document.getElementById('regContactTypeEmailBtn').classList.toggle('active', type==='email');
+  document.getElementById('regContactLabel').textContent = type==='phone' ? 'Номер телефону' : 'Email адреса';
+  document.getElementById('regContact').placeholder = type==='phone' ? '+380XXXXXXXXX' : 'you@example.com';
+  document.getElementById('regSendCodeBtn').textContent = type==='phone' ? 'Надіслати SMS-код' : 'Надіслати лист';
+  document.getElementById('regCodeGroup').style.display = 'none';
+  document.getElementById('regCode').value = '';
+  document.getElementById('regEmailStatus').style.display = 'none';
+};
+
+window.sendRegCode = async function(){
+  if(!throttled('register', 3000)){ alert('Зачекайте кілька секунд перед повторною спробою.'); return; }
+  if(regContactType === 'phone'){
+    alert('Реєстрація за номером телефону наразі недоступна: авторизація повністю переведена на Firebase Authentication (email + пароль). Будь ласка, оберіть вкладку "✉️ Email".');
+    return;
+  }
+
+  const nick = document.getElementById('regNick').value.trim();
+  const pass = document.getElementById('regPass').value;
+  const pass2 = document.getElementById('regPass2').value;
+  const email = document.getElementById('regContact').value.trim();
+  if(!nick||!pass||!pass2||!email){ alert('Заповніть нікнейм, пароль (двічі) і email'); return; }
+  if(!isValidNick(nick)){ alert('Нікнейм має містити 3-20 символів: латинські літери, цифри, підкреслення'); return; }
+  if(!isValidPassword(pass)){ alert('Пароль має містити від 6 до 128 символів'); return; }
+  if(pass !== pass2){ alert('Паролі не співпадають'); return; }
+  if(!isValidEmail(email)){ alert('Введіть коректну email адресу'); return; }
+
+  try {
+    const existingNick = await findAccountByNickname(nick);
+    if(existingNick){ alert('Нікнейм зайнятий'); return; }
+
+    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+    const uid = cred.user.uid;
+
+    await sendEmailVerification(cred.user);
+
+    const userData = {
+      uid, nickname: nick, email,
+      avatar: '', phone: '', desc: '', rating: 0,
+      createdAt: Date.now(), banned: false, strikes: 0, lastActive: Date.now()
+    };
+    await set(ref(db, 'Users/' + uid), userData);
+    await set(ref(db, 'Nicknames/' + nick.toLowerCase()), { uid, email });
+
+    // Одразу після реєстрації Firebase автоматично входить у щойно створений
+    // акаунт, але email ще не підтверджено — виходимо, поки підтвердження не буде
+    // отримано (це також продублює onAuthStateChanged, який ловить той самий стан).
+    await signOut(auth);
+
+    const statusBox = document.getElementById('regEmailStatus');
+    statusBox.style.display = '';
+    statusBox.querySelector('p').textContent = '✅ Лист для підтвердження email надіслано на ' + email + '. Перейдіть за посиланням у листі (перевірте також папку "Спам"), а потім увійдіть за допомогою нікнейму та пароля.';
+  } catch(e){
+    alert('Не вдалося зареєструватись: ' + e.message);
+  }
+};
+
+window.doLogin = async function(){
+  if(!throttled('login', 3000)){ alert('Зачекайте кілька секунд перед повторною спробою.'); return; }
+  const nick = document.getElementById('loginNick').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  if(!nick||!pass){ alert('Заповни нікнейм і пароль'); return; }
+  if(!isValidNick(nick)){ alert('Невірний формат нікнейму'); return; }
+
+  const account = await findAccountByNickname(nick);
+  if(!account){ alert('Користувача не знайдено'); return; }
+
+  try {
+    await signInWithEmailAndPassword(auth, account.email, pass);
+    // Подальші кроки (перевірка email, перевірка бану, завантаження профілю)
+    // виконує onAuthStateChanged.
+  } catch(e){
+    alert('Невірний нікнейм або пароль');
+  }
+};
+
+window.doRegister = async function(){
+  // Уся фактична реєстрація виконується у sendRegCode() (кнопка "Надіслати лист"),
+  // одразу через createUserWithEmailAndPassword — так само, як і в попередній версії,
+  // де підтвердження контакту відбувалось до появи кнопки "Зареєструватись".
+  if(regContactType === 'phone'){
+    alert('Реєстрація за номером телефону наразі недоступна. Будь ласка, оберіть вкладку "✉️ Email".');
+    return;
+  }
+  const statusVisible = document.getElementById('regEmailStatus').style.display !== 'none';
+  if(!statusVisible){
+    alert('Спочатку натисніть "Надіслати лист"');
+    return;
+  }
+  alert('Реєстрація вже завершена — перевірте пошту, підтвердіть email і увійдіть через форму "Увійти".');
+};
+
+window.doForgotPassword = async function(){
+  const nick = prompt('Введіть ваш нікнейм для відновлення пароля:');
+  if(!nick) return;
+  if(!isValidNick(nick.trim())){ alert('Невірний формат нікнейму'); return; }
+  const account = await findAccountByNickname(nick.trim());
+  if(!account){ alert('Користувача з таким нікнеймом не знайдено'); return; }
+  try {
+    await sendPasswordResetEmail(auth, account.email);
+    alert('Лист для відновлення пароля надіслано на email, вказаний при реєстрації.');
+  } catch(e){
+    alert('Не вдалося надіслати лист: ' + e.message);
+  }
+};
+
+function loginSuccess(uid, userData){
+  currentUser = { uid, ...userData };
+  document.getElementById('authPage').style.display='none';
+  document.getElementById('blockedScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('navUsername').textContent = '👤 ' + userData.nickname;
+
+  if((userData.nickname || '').toLowerCase() === 'simdom') {
+    document.querySelectorAll('.admin-tab').forEach(el=>el.style.display='flex');
+    document.getElementById('adminAdFormBlock').style.display = 'block';
+  } else {
+    document.querySelectorAll('.admin-tab').forEach(el=>el.style.display='none');
+    document.getElementById('adminAdFormBlock').style.display = 'none';
+  }
+  
+  loadAll();
+  startOnlineHeartbeat();
+  startPopupAds();
+  goTab('listings');
+}
+
+window.closeStrikeModal = async function() {
+  document.getElementById('strikeModal').classList.remove('open');
+  await update(ref(db, 'Users/' + currentUser.uid), { strikeAlert: false, strikeType: null, strikeReason: null });
+};
+
+window.doLogout = async function(){
+  clearInterval(onlineInterval);
+  stopPopupAds();
+  try {
+    await signOut(auth);
+  } catch(e) { /* якщо немає мережі — все одно чистимо локальний стан */ }
+  currentUser = null;
+  allListings = {}; allUsers = {}; allAds = {}; allChats = {}; allReports = {};
+  currentChatId = null;
+  document.getElementById('app').style.display='none';
+  document.getElementById('blockedScreen').style.display='none';
+  document.getElementById('authPage').style.display='flex';
+};
+
+function startPopupAds(){
+  if(popupAdInterval) clearInterval(popupAdInterval);
+  popupAdInterval = setInterval(showPopupAd, 40000);
+}
+
+function stopPopupAds(){
+  if(popupAdInterval) clearInterval(popupAdInterval);
+  if(popupAdCloseTimeout) clearTimeout(popupAdCloseTimeout);
+  const popup = document.getElementById('popupAd');
+  if(popup) popup.classList.remove('show');
+}
+
+function showPopupAd(){
+  if(!currentUser) return;
+  const adsArr = Object.entries(allAds);
+  if(adsArr.length === 0) return;
+  let candidates = adsArr;
+  if(adsArr.length > 1){
+    candidates = adsArr.filter(([id]) => id !== lastPopupAdId);
+    if(candidates.length === 0) candidates = adsArr;
+  }
+  const [id, a] = candidates[Math.floor(Math.random()*candidates.length)];
+  lastPopupAdId = id;
+  renderPopupAd(a);
+}
+
+function renderPopupAd(a){
+  const popup = document.getElementById('popupAd');
+  if(!popup) return;
+  if(popupAdCloseTimeout) clearTimeout(popupAdCloseTimeout);
+  let mediaContent = '';
+  if(a.photos && a.photos.length > 0){
+    mediaContent = `<img src="${escapeHtml(a.photos[0])}" style="width:100%;height:120px;object-fit:cover;border-radius:10px;margin:8px 0;"/>`;
+  } else if(a.video){
+    mediaContent = `<video src="${escapeHtml(a.video)}" style="width:100%;height:120px;object-fit:cover;border-radius:10px;margin:8px 0;" controls></video>`;
+  }
+  const safeLink = sanitizeUrl(a.link);
+  popup.innerHTML = `
+    <div class="popup-ad-inner">
+      <button class="popup-ad-close" id="popupAdCloseBtn" onclick="closePopupAd()">×</button>
+      <span style="font-size:10px;background:var(--mint);padding:2px 6px;border-radius:6px;font-weight:bold;color:var(--coral);">РЕКЛАМА</span>
+      <h4 style="margin-top:6px;font-family:'Nunito';font-size:14px;">${escapeHtml(a.title || '')}</h4>
+      <p style="margin:6px 0;color:var(--gray);font-size:12px;line-height:1.3;">${escapeHtml(a.desc || '')}</p>
+      ${mediaContent}
+      ${safeLink ? `<a href="${escapeHtml(safeLink)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:var(--blue);font-weight:600;text-decoration:none;">Перейти →</a>` : ''}
+    </div>`;
+  popup.classList.add('show');
+  popupAdCloseTimeout = setTimeout(()=>{
+    const btn = document.getElementById('popupAdCloseBtn');
+    if(btn) btn.style.display = 'flex';
+  }, 3000);
+}
+
+window.closePopupAd = function(){
+  const popup = document.getElementById('popupAd');
+  if(popup) popup.classList.remove('show');
+};
+
+function startOnlineHeartbeat() {
+  if(onlineInterval) clearInterval(onlineInterval);
+  const updateOnline = () => {
+    if(currentUser) set(ref(db, 'Users/' + currentUser.uid + '/lastActive'), Date.now());
+  };
+  updateOnline();
+  onlineInterval = setInterval(updateOnline, 5000);
+}
+
+function isUserOnline(userObj) {
+  if(!userObj || !userObj.lastActive) return false;
+  return (Date.now() - userObj.lastActive) < 12000;
+}
+
+function loadAll(){
+  onValue(ref(db,'Users'), snap=>{ 
+    allUsers = snap.val()||{}; 
+    
+    if(currentUser && allUsers[currentUser.uid]) {
+      const liveData = allUsers[currentUser.uid];
+      const now = Date.now();
+      
+      if(liveData.banned || (liveData.banUntil && liveData.banUntil > now)) {
+        document.getElementById('app').style.display = 'none';
+        document.getElementById('blockedScreen').style.display = 'flex';
+        let expireStr = liveData.banned ? "Назавжди" : new Date(liveData.banUntil).toLocaleString('uk-UA');
+        document.getElementById('blockedReason').innerHTML = `<b>Причина:</b> ${escapeHtml(liveData.banReason || 'Не вказана')}<br><br><b>Термін дії:</b> ${escapeHtml(expireStr)}`;
+        return;
+      } else {
+        if(document.getElementById('blockedScreen').style.display === 'flex') {
+          document.getElementById('blockedScreen').style.display = 'none';
+          document.getElementById('app').style.display = 'block';
+        }
+      }
+      
+      if(liveData.strikeAlert) {
+        document.getElementById('strikeModalReason').innerHTML = `<b>Тип:</b> ${liveData.strikeType === 'delete' ? 'Видалення оголошення' : 'Попередження'}<br><br><b>Деталі:</b> ${escapeHtml(liveData.strikeReason || 'Порушення правил спільноти.')}`;
+        document.getElementById('strikeModal').classList.add('open');
+      }
+    }
+    
+    renderAdminPanel(); 
+    if(currentChatId) updateChatHeaderStatus(); 
+  });
+  
+  onValue(ref(db,'listings'), snap=>{ allListings = snap.val()||{}; renderListings(); renderMyListings(); });
+  onValue(ref(db,'ads'), snap=>{ allAds = snap.val()||{}; renderAds(); });
+  onValue(ref(db,'reports'), snap=>{ allReports = snap.val()||{}; renderReports(); });
+  onValue(ref(db,'chats'), snap=>{ allChats = snap.val()||{}; renderChatList(); if(currentChatId) renderChatMessages(); });
+}
+
+window.goTab = function(tab){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  const pageEl = document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1));
+  if(pageEl) pageEl.classList.add('active');
+};
+
+window.setFilter = function(filterType) {
+  currentFilterVal = filterType;
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.filter === filterType);
+  });
+  applyFilters();
+};
+
+window.applyFilters = function(){ renderListings(); };
+
+function getAverageRating(listing) {
+  if(!listing.reviews) return 0;
+  const revs = Object.values(listing.reviews);
+  const sum = revs.reduce((acc, r) => acc + (r.rating || 0), 0);
+  return (sum / revs.length).toFixed(1);
+}
+
+function renderListings(){
+  const grid = document.getElementById('listingsGrid'); if(!grid) return;
+  const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
+  const sortVal = document.getElementById('filterSort').value;
+  const now = Date.now();
+  const oneDayMs = 24 * 60 * 60 * 1000;
+
+  let list = Object.entries(allListings).filter(([id,l])=>!l.frozen && !l.deleted);
+
+  if(currentFilterVal !== 'all') {
+    list = list.filter(([id, l]) => l.petType === currentFilterVal);
+  }
+
+  if(searchVal) {
+    list = list.filter(([id,l]) => (l.title && l.title.toLowerCase().includes(searchVal)) || (l.breed && l.breed.toLowerCase().includes(searchVal)));
+  }
+
+  // Обробка фільтрів сортування
+  if(sortVal === 'new') {
+    list = list.filter(([id, l]) => (now - (l.createdAt || 0)) <= oneDayMs);
+    list.sort((a,b) => (b[1].createdAt || 0) - (a[1].createdAt || 0));
+  } else if(sortVal === 'cheap') {
+    list = list.filter(([id, l]) => (l.price || 0) <= 50);
+    list.sort((a,b) => (a[1].price || 0) - (b[1].price || 0));
+  } else if(sortVal === 'high') {
+    // Сортування за великою ціною: від найбільшої до найменшої
+    list.sort((a,b) => (b[1].price || 0) - (a[1].price || 0));
+  } else if(sortVal === 'rating') {
+    list.sort((a,b) => getAverageRating(b[1]) - getAverageRating(a[1]));
+  } else {
+    list.sort((a,b) => (b[1].createdAt || 0) - (a[1].createdAt || 0));
+  }
+
+  if(!list.length){ grid.innerHTML='<p style="padding:20px; color:gray; font-size:13px;">Нічого не знайдено за заданими фільтрами</p>'; return; }
+  
+  grid.innerHTML = list.map(([id,l])=>{
+    const img = l.photos?.[0] ? `<img src="${escapeHtml(l.photos[0])}"/>` : `<div class="card-img-placeholder">🐾</div>`;
+    const userStrikes = allUsers[l.ownerUid]?.strikes || 0;
+    const strikeBadge = userStrikes > 0 ? `<div class="strike-badge">⚠️ ${escapeHtml(userStrikes)}</div>` : '';
+    const avg = getAverageRating(l);
+    const starsUI = avg > 0 ? `<span class="stars-ui">⭐ ${escapeHtml(avg)}</span>` : '<span style="font-size:11px; color:#aaa;">Немає оцінок</span>';
+    
+    const isOwner = currentUser && currentUser.uid === l.ownerUid;
+    const reportBtnHtml = !isOwner ? `<div class="card-report-btn" title="Поскаржитись" onclick="event.stopPropagation(); reportListing('${id}', '${l.ownerUid}')">🚨</div>` : '';
+
+    return `<div class="listing-card" onclick="openDetail('${id}')">
+      ${strikeBadge}
+      ${reportBtnHtml}
+      <div class="card-img-wrap">${img}</div>
+      <div class="card-body">
+        <span class="card-pet-type ${l.petType==='cat'?'cat':'dog'}">${l.petType==='dog'?'🐶':'🐱'}</span>
+        <div class="card-title">${escapeHtml(l.title||'')}</div>
+        <div class="card-breed">${escapeHtml(l.breed||'')}</div>
+        <div style="margin-bottom:6px;">${starsUI}</div>
+        <div class="card-footer"><div class="card-price">${escapeHtml(l.price||0)}<span> грн/г</span></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.openDetail = function(id){
+  const l = allListings[id]; if(!l) return;
+  const body = document.getElementById('detailBody');
+  const isOwner = currentUser && currentUser.uid === l.ownerUid;
+  const isAdmin = currentUser && (currentUser.nickname || '').toLowerCase() === 'simdom';
+
+  let actionButton = '';
+  if(isOwner || isAdmin) {
+    actionButton = `<button class="btn-primary" style="background:var(--red); margin-bottom:8px;" onclick="handleDeleteListing('${id}', '${l.ownerUid}', ${isAdmin})">🗑️ Видалити оголошення</button>`;
+  } else {
+    actionButton = `
+      <button class="btn-primary" style="margin-bottom:8px" onclick="startChat('${id}','${l.ownerUid}','${escapeHtml(l.owner)}')">💬 Написати власнику</button>
+      <button class="btn-primary" style="background:var(--orange); font-size:13px; padding:8px; margin-bottom:12px;" onclick="reportListing('${id}', '${l.ownerUid}')">🚨 Поскаржитись на оголошення</button>
+    `;
+  }
+
+  const revsList = Object.values(l.reviews || {});
+  let revsHTML = revsList.map(r => `
+    <div class="review-item">
+      <div style="display:flex; justify-content:space-between; font-weight:bold; margin-bottom:4px;">
+        <span>@${escapeHtml(r.author)}</span><span style="color:var(--yellow)">${'★'.repeat(Math.min(Math.max(r.rating||5,1),5))}</span>
+      </div>
+      <p>${escapeHtml(r.text)}</p>
+    </div>
+  `).join('');
+  if(!revsHTML) revsHTML = '<p style="color:gray; font-size:12px;">Відгуків ще немає. Будь першим!</p>';
+
+  body.innerHTML = `
+    <div class="gallery-main">${l.photos?.[0]?`<img src="${escapeHtml(l.photos[0])}"/>`:''}</div>
+    <div class="listing-detail-price">${escapeHtml(l.price)} грн/год</div>
+    <div class="listing-detail-desc">${escapeHtml(l.desc||'Без опису')}</div>
+    <p style="font-size:14px; margin-bottom:12px;"><b>Власник:</b> @${escapeHtml(l.owner)}</p>
+    ${actionButton}
+    
+    <div class="reviews-section">
+      <h4 style="font-family:'Nunito'; margin-bottom:10px;">Відгуки та оцінки</h4>
+      <div id="reviewsContainer">${revsHTML}</div>
+      
+      ${!isOwner ? `
+        <div style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:12px; margin-top:12px;">
+          <label style="font-size:12px; font-weight:bold; display:block; margin-bottom:4px;">Твоя оцінка:</label>
+          <div class="rating-stars-input" id="starsInputContainer">
+            <span class="active" data-val="1" onclick="setRating(1)">★</span>
+            <span class="active" data-val="2" onclick="setRating(2)">★</span>
+            <span class="active" data-val="3" onclick="setRating(3)">★</span>
+            <span class="active" data-val="4" onclick="setRating(4)">★</span>
+            <span class="active" data-val="5" onclick="setRating(5)">★</span>
+          </div>
+          <textarea class="form-input" id="reviewText" rows="2" placeholder="Напишіть відгук..." style="font-size:13px; padding:8px;"></textarea>
+          <button class="btn-primary" style="padding:8px; font-size:13px; margin-top:6px;" onclick="submitReview('${id}')">Додати відгук</button>
+        </div>
+      ` : ''}
+    </div>
+  `;
+  document.getElementById('detailModal').classList.add('open');
+};
+
+window.setRating = function(val) {
+  selectedRating = val;
+  const spans = document.querySelectorAll('#starsInputContainer span');
+  spans.forEach(s => {
+    const sVal = parseInt(s.dataset.val, 10);
+    s.classList.toggle('active', sVal <= val);
+  });
+};
+
+window.submitReview = async function(id) {
+  if(!throttled('submitReview', 3000)){ alert('Зачекайте кілька секунд перед наступним відгуком.'); return; }
+  const txt = clampText(document.getElementById('reviewText').value.trim(), 500);
+  if(!txt) { alert('Введіть text відгуку'); return; }
+  const rating = Math.min(Math.max(parseInt(selectedRating,10)||5,1),5);
+  await push(ref(db, `listings/${id}/reviews`), {
+    author: currentUser.nickname,
+    authorUid: currentUser.uid,
+    rating: rating,
+    text: txt,
+    createdAt: Date.now()
+  });
+  alert('Відгук додано!');
+  openDetail(id);
+};
+
+window.reportListing = async function(listingId, ownerUid) {
+  if(!throttled('reportListing', 3000)){ alert('Зачекайте кілька секунд перед наступною скаргою.'); return; }
+  const reason = prompt('Вкажіть причину скарги:');
+  if(reason === null) return;
+  const cleanReason = clampText(reason.trim(), 500);
+  if(!cleanReason) { alert('Причина є обов\'язковою!'); return; }
+  
+  await push(ref(db, 'reports'), {
+    sender: currentUser.uid,
+    targetUser: ownerUid,
+    listingId: listingId,
+    listingTitle: allListings[listingId]?.title || 'Оголошення',
+    reason: cleanReason,
+    createdAt: Date.now()
+  });
+  alert('Скарга надіслана в admin-панель.');
+};
+
+window.handleDeleteListing = async function(id, ownerUid, isAdmin) {
+  if(isAdmin) {
+    const reasonRaw = prompt('Вкажіть причину видалення оголошення:');
+    if(reasonRaw === null) return;
+    const reason = clampText(reasonRaw.trim(), 300);
+    await update(ref(db, 'listings/' + id), { deleted: true });
+    await update(ref(db, 'Users/' + ownerUid), {
+      strikeAlert: true,
+      strikeType: 'delete',
+      strikeReason: `Ваше оголошення було видалено адміністратором simdom. Причина: ${reason || 'Не вказана'}`
+    });
+    alert('Оголошення видалено.');
+  } else {
+    if(confirm('Ви впевнені, що хочете видалити своє оголошення?')) {
+      await update(ref(db, 'listings/' + id), { deleted: true });
+    }
+  }
+  closeModal('detailModal');
+};
+
+window.startChat = function(listingId, ownerUid, ownerNickDisplay){
+  const chatId = [currentUser.uid, ownerUid, listingId].sort().join('_');
+  set(ref(db,'chats/'+chatId+'/participants'), [currentUser.uid, ownerUid]);
+  set(ref(db,'chats/'+chatId+'/listingTitle'), allListings[listingId]?.title || ('Чат з ' + ownerNickDisplay));
+  closeModal('detailModal');
+  goTab('chats');
+  openChatWindow(chatId);
+};
+
+window.openChatWindow = function(chatId){
+  currentChatId = chatId;
+  document.getElementById('chatListView').style.display='none';
+  document.getElementById('chatWindowView').style.display='block';
+  document.getElementById('chatHeaderTitle').textContent = allChats[chatId]?.listingTitle || 'Чат';
+  updateChatHeaderStatus();
+  renderChatMessages();
+};
+
+// Допоміжна функція: у чатах/повідомленнях зберігається лише uid, а для показу в
+// інтерфейсі використовується актуальний нікнейм із профілю (allUsers[uid].nickname).
+function nickOf(uid){
+  return allUsers[uid]?.nickname || uid || '?';
+}
+
+function updateChatHeaderStatus() {
+  if(!currentChatId || !allChats[currentChatId]) return;
+  const opponents = allChats[currentChatId].participants?.filter(p => p !== currentUser.uid);
+  if(opponents && opponents.length > 0) {
+    const opp = opponents[0];
+    const online = isUserOnline(allUsers[opp]);
+    document.getElementById('chatHeaderStatus').innerHTML = online ? '<span style="color:var(--green)">🟢 Онлайн</span>' : '<span style="color:var(--gray)">⚫ Офлайн</span>';
+  }
+}
+
+window.closeChatWindow = function(){ currentChatId = null; document.getElementById('chatListView').style.display='block'; document.getElementById('chatWindowView').style.display='none'; };
+
+function renderChatList(){
+  const list = document.getElementById('chatList'); if(!list) return;
+  const myChats = Object.entries(allChats).filter(([id,c])=> {
+    return c.participants?.includes(currentUser.uid) && (!c.deletedBy || !c.deletedBy[currentUser.uid]);
+  });
+  
+  list.innerHTML = myChats.map(([id,c])=>`
+    <div class="chat-item">
+      <div class="chat-item-info" onclick="openChatWindow('${id}')">
+        <b style="font-size:14px;">${escapeHtml(c.listingTitle)}</b><br>
+        <span style="font-size:11px; color:gray;">Учасники: ${escapeHtml((c.participants||[]).map(nickOf).join(', '))}</span>
+      </div>
+      <button style="padding:6px 10px; background:var(--red); color:#fff; border-radius:8px; font-size:12px;" onclick="deleteChatForMe('${id}')">🗑️</button>
+    </div>
+  `).join('');
+}
+
+window.deleteChatForMe = async function(chatId) {
+  if(confirm('Видалити цей чат для себе?')) {
+    await set(ref(db, `chats/${chatId}/deletedBy/${currentUser.uid}`), true);
+  }
+};
+
+function renderChatMessages(){
+  const container = document.getElementById('chatMessages'); if(!container || !currentChatId) return;
+  const msgs = Object.entries(allChats[currentChatId]?.messages||{});
+  
+  container.innerHTML = msgs.map(([mId, m])=>`
+    <div class="msg ${m.author===currentUser.uid?'mine':'theirs'}" onclick="${m.author===currentUser.uid ? `deleteMessage('${mId}')`:''}">
+      <b>${escapeHtml(nickOf(m.author))}:</b><br>${escapeHtml(m.text)}
+    </div>
+  `).join('');
+  container.scrollTop = container.scrollHeight;
+}
+
+window.deleteMessage = async function(msgId) {
+  if(confirm('Видалити це повідомлення для всіх?')) {
+    await remove(ref(db, `chats/${currentChatId}/messages/${msgId}`));
+  }
+};
+
+window.sendMsg = async function(){
+  const input = document.getElementById('chatInput'); if(!input.value.trim() || !currentChatId) return;
+  if(!throttled('sendMsg', 3000)){ alert('Занадто швидко! Зачекайте кілька секунд між повідомленнями.'); return; }
+  const text = clampText(input.value.trim(), 1000);
+  await set(ref(db, `chats/${currentChatId}/deletedBy`), null);
+  await push(ref(db,'chats/'+currentChatId+'/messages'), { author: currentUser.uid, text: text, createdAt: Date.now() });
+  input.value='';
+};
+
+window.previewAdPhotos = function(e) {
+  adPhotosData = [];
+  const preview = document.getElementById('adPhotosPreview');
+  preview.innerHTML = '';
+  const files = Array.from(e.target.files).slice(0, 10);
+  files.forEach(f => {
+    if(!f.type || !f.type.startsWith('image/')){ alert(`Файл "${f.name}" не є зображенням і буде пропущено.`); return; }
+    if(f.size > MAX_PHOTO_BYTES){ alert(`Фото "${f.name}" завелике (максимум ${MAX_PHOTO_BYTES/1024/1024} МБ) і буде пропущено.`); return; }
+    const r = new FileReader();
+    r.onload = () => {
+      adPhotosData.push(r.result);
+      const img = document.createElement('img');
+      img.src = r.result;
+      img.style.cssText = 'width:50px; height:50px; object-fit:cover; border-radius:6px;';
+      preview.appendChild(img);
+    };
+    r.readAsDataURL(f);
+  });
+};
+
+window.previewAdVideo = function(e) {
+  adVideoData = null;
+  document.getElementById('adVideoPreview').innerHTML = '';
+  const file = e.target.files[0];
+  if(!file) return;
+
+  if(!file.type || !file.type.startsWith('video/')){
+    alert('Обраний файл не є відео.');
+    document.getElementById('adVideoInput').value = '';
+    return;
+  }
+  if(file.size > MAX_VIDEO_BYTES){
+    alert(`Відео завелике! Максимальний розмір — ${MAX_VIDEO_BYTES/1024/1024} МБ.`);
+    document.getElementById('adVideoInput').value = '';
+    return;
+  }
+
+  const videoEl = document.createElement('video');
+  videoEl.src = URL.createObjectURL(file);
+  videoEl.onloadedmetadata = function() {
+    if(videoEl.duration > 41) {
+      alert('Відео занадто довге! Максимум 40 секунд.');
+      document.getElementById('adVideoInput').value = '';
+      return;
+    }
+    const r = new FileReader();
+    r.onload = () => {
+      adVideoData = r.result;
+      const preview = document.getElementById('adVideoPreview');
+      preview.innerHTML = '';
+      const vEl = document.createElement('video');
+      vEl.src = r.result;
+      vEl.controls = true;
+      vEl.style.cssText = 'width:120px; border-radius:8px;';
+      preview.appendChild(vEl);
+    };
+    r.readAsDataURL(file);
+  };
+};
+
+window.createAd = async function() {
+  if((currentUser.nickname || '').toLowerCase() !== 'simdom') { alert('У вас немає прав!'); return; }
+  if(!throttled('createAd', 3000)){ alert('Зачекайте кілька секунд перед публікацією наступної реклами.'); return; }
+  const title = clampText(document.getElementById('adTitle').value.trim(), 100);
+  const desc = clampText(document.getElementById('adDesc').value.trim(), 500);
+  const rawLink = document.getElementById('adLink').value.trim();
+  const link = rawLink ? sanitizeUrl(rawLink) : '';
+  if(rawLink && !link) { alert('Посилання має бути коректним http(s) URL.'); return; }
+  if(!title || !desc) { alert('Заповніть обов\'язкові поля.'); return; }
+  
+  await push(ref(db, 'ads'), { 
+    title, desc, link, 
+    photos: adPhotosData, 
+    video: adVideoData || null,
+    owner: currentUser.nickname,
+    ownerUid: currentUser.uid,
+    createdAt: Date.now() 
+  });
+  
+  alert('Рекламу успішно опубліковано!');
+  document.getElementById('adTitle').value = '';
+  document.getElementById('adDesc').value = '';
+  document.getElementById('adLink').value = '';
+  document.getElementById('adPhotosInput').value = '';
+  document.getElementById('adVideoInput').value = '';
+  document.getElementById('adPhotosPreview').innerHTML = '';
+  document.getElementById('adVideoPreview').innerHTML = '';
+  adPhotosData = [];
+  adVideoData = null;
+};
+
+function renderAds(){
+  const grid = document.getElementById('adsGrid'); if(!grid) return;
+  const isSimdom = currentUser && (currentUser.nickname || '').toLowerCase() === 'simdom';
+  
+  grid.innerHTML = Object.entries(allAds).map(([id, a]) => {
+    let mediaContent = '';
+    if((a.photos && a.photos.length > 0) || a.video) {
+      mediaContent = `<div class="ad-media-container">`;
+      if(a.video) mediaContent += `<video src="${escapeHtml(a.video)}" controls></video>`;
+      if(a.photos) a.photos.forEach(img => { mediaContent += `<img src="${escapeHtml(img)}"/>`; });
+      mediaContent += `</div>`;
+    }
+    const safeLink = sanitizeUrl(a.link);
+
+    return `
+    <div class="ad-card">
+      <span style="font-size:10px; background:var(--mint); padding:2px 6px; border-radius:6px; font-weight:bold; color:var(--coral);">ОФІЦІЙНА РЕКЛАМА</span>
+      <h3 style="margin-top:6px; font-family:'Nunito'; font-size:16px;">${escapeHtml(a.title)}</h3>
+      <p style="margin:6px 0; color:var(--gray); font-size:13px; line-height:1.3;">${escapeHtml(a.desc)}</p>
+      ${mediaContent}
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; gap:8px; flex-wrap:wrap;">
+        ${safeLink ? `<a href="${escapeHtml(safeLink)}" target="_blank" rel="noopener noreferrer" style="font-size:13px; color:var(--blue); font-weight:600; text-decoration:none;">Перейти →</a>` : ''}
+        ${isSimdom ? `<button style="margin-left:auto; background:var(--red); color:#fff; padding:4px 8px; border-radius:6px; font-size:11px;" onclick="deleteAd('${id}')">🗑️ Видалити</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.deleteAd = async function(id) {
+  if(confirm('Видалити цей рекламний блок для всіх користувачів?')) {
+    await remove(ref(db, 'ads/' + id));
+  }
+};
+
+window.switchAdminSubTab = function(type) {
+  document.getElementById('admTabUsers').classList.toggle('active', type==='users');
+  document.getElementById('admTabReports').classList.toggle('active', type==='reports');
+  document.getElementById('adminUsersSection').style.display = type==='users'?'block':'none';
+  document.getElementById('adminReportsSection').style.display = type==='reports'?'block':'none';
+};
+
+function renderAdminPanel(){
+  const container = document.getElementById('adminUsersList'); if(!container) return;
+  if(currentUser && (currentUser.nickname || '').toLowerCase() !== 'simdom') return;
+
+  container.innerHTML = Object.entries(allUsers).map(([uid, u]) => {
+    if((u.nickname || '').toLowerCase() === 'simdom') return ''; 
+    const strikeCount = u.strikes || 0;
+    const online = isUserOnline(u);
+    
+    return `
+      <div class="admin-card-item">
+        <div>
+          <strong>@${escapeHtml(u.nickname)}</strong> 
+          <span class="status-tag ${online?'online':'offline'}">${online?'Онлайн':'Офлайн'}</span>
+          <br><span style="font-size:13px;">Статус: <b>${u.banned || (u.banUntil && u.banUntil > Date.now()) ? '🔴 Заблокований' : '🟢 Активний'}</b> — Страйків: <b>${escapeHtml(strikeCount)}</b></span>
+        </div>
+        <div style="display:flex; gap:4px; flex-wrap:wrap;">
+          <button style="background:var(--blue); color:#fff; padding:6px; border-radius:6px; font-size:12px; flex:1;" onclick="adminContactUser('${uid}')">💬 Чат</button>
+          <button style="background:var(--orange); color:#fff; padding:6px; border-radius:6px; font-size:12px; flex:1;" onclick="adminGiveStrike('${uid}', ${strikeCount})">⚠️ Страйк</button>
+          <button style="background:var(--red); color:#fff; padding:6px; border-radius:6px; font-size:12px; flex:1;" onclick="adminBanPrompt('${uid}')">⛔ Бан</button>
+          <button style="background:var(--green); color:#fff; padding:6px; border-radius:6px; font-size:12px; flex:1;" onclick="adminUnban('${uid}')">🔓 Унбан</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderReports() {
+  const container = document.getElementById('adminReportsList'); if(!container) return;
+  const countBadge = document.getElementById('reportsCount');
+  const reportsList = Object.entries(allReports);
+  
+  if(countBadge) countBadge.textContent = reportsList.length;
+  
+  if(!reportsList.length) {
+    container.innerHTML = '<p style="color:gray; padding:12px; font-size:13px;">Скарг немає 🎉</p>';
+    return;
+  }
+  
+  container.innerHTML = reportsList.map(([rId, r]) => {
+    const userStrikes = allUsers[r.targetUser]?.strikes || 0;
+    return `
+      <div class="admin-card-item" style="border-left: 4px solid var(--red);">
+        <div>
+          <span style="font-size:11px; color:var(--gray);">${escapeHtml(new Date(r.createdAt).toLocaleString('uk-UA'))}</span><br>
+          <strong>Хто кинув:</strong> @${escapeHtml(nickOf(r.sender))}<br>
+          <strong>На кого (автор):</strong> @${escapeHtml(nickOf(r.targetUser))} (Страйків: ${escapeHtml(userStrikes)})<br>
+          <strong>Оголошення:</strong> ${escapeHtml(r.listingTitle)}<br>
+          <strong>Причина скарги:</strong> <span style="color:var(--red); font-weight:500;">${escapeHtml(r.reason)}</span>
+        </div>
+        <div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:4px;">
+          <button style="background:var(--red); color:#fff; padding:6px; border-radius:6px; font-size:11px;" onclick="handleDeleteListing('${r.listingId}', '${r.targetUser}', true)">🗑️ Видалити оголошення</button>
+          <button style="background:var(--orange); color:#fff; padding:6px; border-radius:6px; font-size:11px;" onclick="adminGiveStrike('${r.targetUser}', ${userStrikes})">⚠️ Дати страйк автору</button>
+          <button style="background:var(--gray); color:#fff; padding:6px; border-radius:6px; font-size:11px;" onclick="deleteReport('${rId}')">❌ Видалити скаргу</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+window.deleteReport = async function(rId) {
+  if(confirm('Видалити цю скаргу зі списку?')) {
+    await remove(ref(db, 'reports/' + rId));
+  }
+};
+
+window.adminContactUser = function(targetUid) {
+  const chatId = [currentUser.uid, targetUid, 'admin_chat'].sort().join('_');
+  set(ref(db,'chats/'+chatId+'/participants'), [currentUser.uid, targetUid]);
+  set(ref(db,'chats/'+chatId+'/listingTitle'), '🛡️ Зв\'язок з Адміністрацією');
+  goTab('chats');
+  openChatWindow(chatId);
+};
+
+window.adminGiveStrike = async function(uid, currentStrikes){
+  const reasonRaw = prompt('Вкажіть причину винесення страйку:');
+  if(reasonRaw === null) return;
+  const reason = clampText(reasonRaw.trim(), 300);
+  const newStrikes = currentStrikes + 1;
+  const updates = { strikes: newStrikes, strikeAlert: true, strikeType: 'strike', strikeReason: reason || 'Порушення правил спільноти.' };
+  if(newStrikes >= 3) {
+    updates.banned = true;
+    updates.banReason = "Автоматичне блокування за 3 страйки. " + (reason || '');
+  }
+  await update(ref(db, 'Users/' + uid), updates);
+  alert('Страйк видано!');
+};
+
+window.adminBanPrompt = async function(uid) {
+  const reasonRaw = prompt('Вкажіть причину блокування:');
+  if(reasonRaw === null) return;
+  const reason = clampText(reasonRaw.trim(), 300);
+  const type = prompt('Оберіть тип бану:\n1 — Тимчасовий\n2 — Назавжди');
+  if(type === '1') {
+    const days = parseInt(prompt('На скільки днів заблокувати? (1-365):'), 10);
+    if(isNaN(days) || days < 1 || days > 365) return;
+    const banUntilTimestamp = Date.now() + (days * 24 * 60 * 60 * 1000);
+    await update(ref(db, 'Users/' + uid), { banUntil: banUntilTimestamp, banReason: reason || 'Не вказана', banned: false });
+  } else if(type === '2') {
+    await update(ref(db, 'Users/' + uid), { banned: true, banUntil: null, banReason: reason || 'Не вказана' });
+  }
+};
+
+window.adminUnban = async function(uid) {
+  if(confirm(`Розблокувати користувача @${escapeHtml(nickOf(uid))} та анулювати його страйки?`)) {
+    await update(ref(db, 'Users/' + uid), { 
+      banned: false, banUntil: null, strikes: 0, banReason: null, 
+      strikeAlert: true, strikeType: 'unban', strikeReason: `З тебе знято всі обмеження та страйки! Можеш продовжувати роботу.` 
+    });
+  }
+};
+
+window.openCreateModal = function(){ document.getElementById('createModal').classList.add('open'); };
+window.closeModal = function(id){ document.getElementById(id).classList.remove('open'); };
+
+window.previewPhotos = async function(e){
+  newPhotos = [];
+  const grid = document.getElementById('photoPreviewGrid');
+  grid.innerHTML = '';
+  for(const f of e.target.files){
+    if(!f.type || !f.type.startsWith('image/')){ alert(`Файл "${f.name}" не є зображенням і буде пропущено.`); continue; }
+    if(f.size > MAX_PHOTO_BYTES){ alert(`Фото "${f.name}" завелике (максимум ${MAX_PHOTO_BYTES/1024/1024} МБ) і буде пропущено.`); continue; }
+    const r = new FileReader();
+    r.onload = () => {
+      newPhotos.push(r.result);
+      const img = document.createElement('img');
+      img.src = r.result;
+      img.style.cssText = 'width:45px;height:45px;object-fit:cover;border-radius:6px';
+      grid.appendChild(img);
+    };
+    r.readAsDataURL(f);
+  }
+};
+
+window.createListing = async function(){
+  if(!throttled('createListing', 3000)){ alert('Зачекайте кілька секунд перед створенням наступного оголошення.'); return; }
+  const title = clampText(document.getElementById('newTitle').value.trim(), 100);
+  const petType = document.getElementById('newPetType').value === 'cat' ? 'cat' : 'dog';
+  const breed = clampText(document.getElementById('newBreed').value.trim(), 60);
+  const price = parseFloat(document.getElementById('newPrice').value);
+  const desc = clampText(document.getElementById('newDesc').value.trim(), 1000);
+  if(!title || !breed || !price) { alert('Заповніть обов\'язкові поля!'); return; }
+  if(!isFinite(price) || price <= 0 || price > 1000000) { alert('Вкажіть коректну ціну.'); return; }
+  await push(ref(db,'listings'),{ title, petType, breed, price, desc, photos: newPhotos, owner: currentUser.nickname, ownerUid: currentUser.uid, createdAt: Date.now(), frozen:false, deleted:false });
+  closeModal('createModal');
+};
+
+window.renderMyListings = function(){
+  const container = document.getElementById('myListingsContainer'); if(!container) return;
+  const mine = Object.entries(allListings).filter(([,l])=>l.ownerUid===currentUser.uid && !l.deleted);
+  if(!mine.length) { container.innerHTML = '<p style="color:gray; padding:10px; font-size:13px;">Активних оголошень немає</p>'; return; }
+  
+  container.innerHTML = mine.map(([id,l])=> {
+    const isFrozen = l.frozen === true;
+    return `
+    <div class="listing-card" style="cursor:default">
+      <div class="card-body">
+        <div class="card-title">${escapeHtml(l.title)} ${isFrozen ? '<span style="color:var(--orange); font-size:11px;">(Заморожено)</span>' : ''}</div>
+        <div class="card-breed">${escapeHtml(l.breed)} — ${escapeHtml(l.price)} грн/г</div>
+        <div style="display:flex; gap:4px; margin-top:6px;">
+          <button style="flex:1; padding:6px; background:${isFrozen ? 'var(--green)' : 'var(--orange)'}; color:#fff; border-radius:6px; font-size:11px; font-weight:bold;" onclick="toggleFreezeListing('${id}', ${isFrozen})">
+            ${isFrozen ? '🔓 Розморозити' : '❄️ Заморозити'}
+          </button>
+          <button style="padding:6px 12px; background:var(--red); color:#fff; border-radius:6px; font-size:11px; font-weight:bold;" onclick="deleteListing('${id}')">🗑</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+};
+
+window.toggleFreezeListing = async function(id, currentStatus) {
+  await update(ref(db, 'listings/' + id), { frozen: !currentStatus });
+  alert(currentStatus ? 'Оголошення розморожено та повернуто в пошук!' : 'Оголошення заморожено й приховано від інших.');
+};
+
+window.deleteListing = async function(id){ if(confirm('Видалити оголошення?')) { await update(ref(db,'listings/'+id), {deleted:true}); } };
+</script>
+</body>
+</html>
