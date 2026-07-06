@@ -414,6 +414,17 @@ let allAds = {};
 let allChats = {};
 let allReports = {};
 let currentFilterVal = 'all';
+// Пагінація стрічки оголошень: спершу рендеримо лише перші 20, решта довантажується
+// порціями по 15-25 при прогортанні до кінця стрічки (щоб не грузити одразу всі
+// фото/картки, яких може бути дуже багато).
+let listingsRenderLimit = 20;
+const LISTINGS_INITIAL_LIMIT = 20;
+const LISTINGS_LOAD_MORE_MIN = 15;
+const LISTINGS_LOAD_MORE_MAX = 25;
+let _listingsSentinelObserver = null;
+function nextListingsLoadMoreCount(){
+  return LISTINGS_LOAD_MORE_MIN + Math.floor(Math.random() * (LISTINGS_LOAD_MORE_MAX - LISTINGS_LOAD_MORE_MIN + 1));
+}
 let newPhotos = [];
 let currentChatId = null;
 let onlineInterval = null;
@@ -502,6 +513,49 @@ function throttled(actionKey, minIntervalMs = 3000){
 /* ======================= БЕЗПЕКА: ПЕРЕВІРКА РОЗМІРУ ФАЙЛІВ ======================= */
 const MAX_PHOTO_BYTES = 3 * 1024 * 1024;   // 3 МБ на фото
 const MAX_VIDEO_BYTES = 20 * 1024 * 1024;  // 20 МБ на відео
+
+// ======================= ОПТИМІЗАЦІЯ ФОТО (без Firebase Storage) =======================
+// Фото, як і раніше, зберігаються як base64-рядок прямо в Realtime Database —
+// це НЕ змінюється. Але перед тим, як перетворити файл на base64, зображення
+// масштабується до розумного максимального розміру і перекодовується в JPEG з
+// помірною якістю. Це суттєво зменшує вагу самого base64-рядка (а отже — обсяг
+// запису/читання з бази та трафік), при цьому фото виглядає для користувача
+// так само, як і раніше (адже картки й галерея все одно показують його в
+// невеликому розмірі).
+function compressImageFile(file, maxDim = 750, quality = 0.75){
+  return new Promise((resolve) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      let { width, height } = img;
+      // Понижуємо роздільність лише якщо вона перевищує 750px по більшій стороні —
+      // якщо фото й так менше/гірше за якістю, воно НЕ апскейлиться і лишається як є.
+      if(width > maxDim || height > maxDim){
+        const scale = maxDim / Math.max(width, height);
+        width = Math.max(1, Math.round(width * scale));
+        height = Math.max(1, Math.round(height * scale));
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      // WebP дає суттєво менший розмір файлу за тієї ж візуальної якості, ніж JPEG.
+      resolve(canvas.toDataURL('image/webp', quality));
+    };
+    // Якщо з якоїсь причини зображення не вдалося обробити через canvas (рідкісний
+    // випадок, наприклад незвичний формат) — не втрачаємо фото, а просто зчитуємо
+    // оригінальний файл як base64, як це робилось раніше.
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.readAsDataURL(file);
+    };
+    img.src = objectUrl;
+  });
+}
 
 // Автовхід і перевірка стану авторизації повністю делеговані Firebase Authentication.
 // onAuthStateChanged спрацьовує одразу при завантаженні сторінки (якщо Firebase SDK
@@ -836,8 +890,9 @@ window.closeStrikeModal = async function() {
 };
 
 window.doLogout = async function(){
-  clearInterval(onlineInterval);
+  stopOnlineHeartbeat();
   stopPopupAds();
+  detachAllListeners();
   try {
     await signOut(auth);
   } catch(e) { /* якщо немає мережі — все одно чистимо локальний стан */ }
@@ -881,9 +936,9 @@ function renderPopupAd(a){
   if(popupAdCloseTimeout) clearTimeout(popupAdCloseTimeout);
   let mediaContent = '';
   if(a.photos && a.photos.length > 0){
-    mediaContent = `<img src="${escapeHtml(a.photos[0])}" style="width:100%;height:120px;object-fit:cover;border-radius:10px;margin:8px 0;"/>`;
+    mediaContent = `<img loading="lazy" src="${escapeHtml(a.photos[0])}" style="width:100%;height:120px;object-fit:cover;border-radius:10px;margin:8px 0;"/>`;
   } else if(a.video){
-    mediaContent = `<video src="${escapeHtml(a.video)}" style="width:100%;height:120px;object-fit:cover;border-radius:10px;margin:8px 0;" controls></video>`;
+    mediaContent = `<video src="${escapeHtml(a.video)}" preload="none" style="width:100%;height:120px;object-fit:cover;border-radius:10px;margin:8px 0;" controls></video>`;
   }
   const safeLink = sanitizeUrl(a.link);
   popup.innerHTML = `
@@ -907,22 +962,113 @@ window.closePopupAd = function(){
   if(popup) popup.classList.remove('show');
 };
 
+// Heartbeat, оптимізований під менше навантаження на базу:
+// - інтервал збільшено з 5с до 15с (утричі менше записів під час активної сесії);
+// - поки вкладка неактивна (visibilitychange -> hidden), періодичні записи
+//   повністю зупиняються — сенсу оновлювати "останню активність" немає;
+// - при поверненні на вкладку lastActive одразу оновлюється й таймер відновлюється;
+// - поріг "онлайн" (isUserOnline) збільшено пропорційно інтервалу, щоб статус
+//   лишався настільки ж точним, як і раніше (той самий запас у 2.4x інтервалу).
+const HEARTBEAT_INTERVAL_MS = 15000;
+const ONLINE_THRESHOLD_MS = 36000;
+let _heartbeatVisibilityHandler = null;
+
 function startOnlineHeartbeat() {
   if(onlineInterval) clearInterval(onlineInterval);
   const updateOnline = () => {
     if(currentUser) set(ref(db, 'Users/' + currentUser.uid + '/lastActive'), Date.now());
   };
+  const startInterval = () => {
+    if(onlineInterval) clearInterval(onlineInterval);
+    onlineInterval = setInterval(updateOnline, HEARTBEAT_INTERVAL_MS);
+  };
+
   updateOnline();
-  onlineInterval = setInterval(updateOnline, 5000);
+  startInterval();
+
+  if(_heartbeatVisibilityHandler){
+    document.removeEventListener('visibilitychange', _heartbeatVisibilityHandler);
+  }
+  _heartbeatVisibilityHandler = () => {
+    if(document.visibilityState === 'hidden'){
+      if(onlineInterval) clearInterval(onlineInterval);
+    } else {
+      updateOnline();
+      startInterval();
+    }
+  };
+  document.addEventListener('visibilitychange', _heartbeatVisibilityHandler);
+}
+
+function stopOnlineHeartbeat() {
+  if(onlineInterval) clearInterval(onlineInterval);
+  onlineInterval = null;
+  if(_heartbeatVisibilityHandler){
+    document.removeEventListener('visibilitychange', _heartbeatVisibilityHandler);
+    _heartbeatVisibilityHandler = null;
+  }
 }
 
 function isUserOnline(userObj) {
   if(!userObj || !userObj.lastActive) return false;
-  return (Date.now() - userObj.lastActive) < 12000;
+  return (Date.now() - userObj.lastActive) < ONLINE_THRESHOLD_MS;
+}
+
+// Функції відписки (повертаються onValue()) зберігаються тут, щоб при виході з
+// акаунта можна було коректно від'єднати всіх слухачів. Без цього кожен повторний
+// вхід (без перезавантаження сторінки) додавав би ще один комплект listeners
+// поверх старих — вони продовжували б працювати "у фоні" й даремно витрачати
+// читання з бази.
+let _dbListenerUnsubs = [];
+let _listenersActive = false;
+
+// Адмін-панель: список користувачів оновлюється при КОЖНІЙ зміні у вузлі 'Users'
+// (а це відбувається дуже часто — щоразу, коли будь-який онлайн-користувач шле
+// heartbeat). Обмежуємо реальний перерендер адмін-списку до одного разу на 15
+// секунд — свіжіші дані все одно вже лежать у allUsers, просто DOM не смикається
+// щосекунди.
+const ADMIN_PANEL_MIN_INTERVAL_MS = 15000;
+let _adminPanelLastRenderAt = 0;
+let _adminPanelPendingTimer = null;
+function scheduleAdminPanelRender(){
+  const elapsed = Date.now() - _adminPanelLastRenderAt;
+  if(elapsed >= ADMIN_PANEL_MIN_INTERVAL_MS){
+    _adminPanelLastRenderAt = Date.now();
+    renderAdminPanel();
+  } else if(!_adminPanelPendingTimer){
+    _adminPanelPendingTimer = setTimeout(()=>{
+      _adminPanelPendingTimer = null;
+      _adminPanelLastRenderAt = Date.now();
+      renderAdminPanel();
+    }, ADMIN_PANEL_MIN_INTERVAL_MS - elapsed);
+  }
+}
+
+// Нове/змінене оголошення не обов'язково показувати миттєво в стрічці — невелика
+// затримка (3-5с) дозволяє згладити перерендер DOM, якщо кілька змін приходять
+// одна за одною. Перше завантаження стрічки після входу лишається миттєвим, щоб
+// користувач одразу бачив контент, а не порожній екран.
+const LISTINGS_UPDATE_DEBOUNCE_MS = 4000;
+let _listingsFirstLoadDone = false;
+let _listingsDebounceTimer = null;
+
+function detachAllListeners(){
+  _dbListenerUnsubs.forEach(unsub => { try { unsub(); } catch(e){} });
+  _dbListenerUnsubs = [];
+  _listenersActive = false;
+  if(_adminPanelPendingTimer){ clearTimeout(_adminPanelPendingTimer); _adminPanelPendingTimer = null; }
+  _adminPanelLastRenderAt = 0;
+  if(_listingsDebounceTimer){ clearTimeout(_listingsDebounceTimer); _listingsDebounceTimer = null; }
+  _listingsFirstLoadDone = false;
 }
 
 function loadAll(){
-  onValue(ref(db,'Users'), snap=>{ 
+  // Захист від повторної підписки: якщо слухачі вже активні (наприклад, повторний
+  // виклик loginSuccess без проміжного logout), нових не додаємо.
+  if(_listenersActive) return;
+  _listenersActive = true;
+
+  _dbListenerUnsubs.push(onValue(ref(db,'Users'), snap=>{ 
     allUsers = snap.val()||{}; 
     
     if(currentUser && allUsers[currentUser.uid]) {
@@ -948,14 +1094,26 @@ function loadAll(){
       }
     }
     
-    renderAdminPanel(); 
+    scheduleAdminPanelRender(); 
     if(currentChatId) updateChatHeaderStatus(); 
-  });
+  }));
   
-  onValue(ref(db,'listings'), snap=>{ allListings = snap.val()||{}; renderListings(); renderMyListings(); });
-  onValue(ref(db,'ads'), snap=>{ allAds = snap.val()||{}; renderAds(); });
-  onValue(ref(db,'reports'), snap=>{ allReports = snap.val()||{}; renderReports(); });
-  onValue(ref(db,'chats'), snap=>{ allChats = snap.val()||{}; renderChatList(); if(currentChatId) renderChatMessages(); });
+  _dbListenerUnsubs.push(onValue(ref(db,'listings'), snap=>{
+    allListings = snap.val()||{};
+    if(!_listingsFirstLoadDone){
+      _listingsFirstLoadDone = true;
+      renderListings(); renderMyListings();
+      return;
+    }
+    if(_listingsDebounceTimer) clearTimeout(_listingsDebounceTimer);
+    _listingsDebounceTimer = setTimeout(()=>{
+      _listingsDebounceTimer = null;
+      renderListings(); renderMyListings();
+    }, LISTINGS_UPDATE_DEBOUNCE_MS);
+  }));
+  _dbListenerUnsubs.push(onValue(ref(db,'ads'), snap=>{ allAds = snap.val()||{}; renderAds(); }));
+  _dbListenerUnsubs.push(onValue(ref(db,'reports'), snap=>{ allReports = snap.val()||{}; renderReports(); }));
+  _dbListenerUnsubs.push(onValue(ref(db,'chats'), snap=>{ allChats = snap.val()||{}; renderChatList(); if(currentChatId) renderChatMessages(); }));
 }
 
 window.goTab = function(tab){
@@ -973,7 +1131,7 @@ window.setFilter = function(filterType) {
   applyFilters();
 };
 
-window.applyFilters = function(){ renderListings(); };
+window.applyFilters = function(){ listingsRenderLimit = LISTINGS_INITIAL_LIMIT; renderListings(); };
 
 function getAverageRating(listing) {
   if(!listing.reviews) return 0;
@@ -1015,10 +1173,16 @@ function renderListings(){
     list.sort((a,b) => (b[1].createdAt || 0) - (a[1].createdAt || 0));
   }
 
-  if(!list.length){ grid.innerHTML='<p style="padding:20px; color:gray; font-size:13px;">Нічого не знайдено за заданими фільтрами</p>'; return; }
-  
-  grid.innerHTML = list.map(([id,l])=>{
-    const img = l.photos?.[0] ? `<img src="${escapeHtml(l.photos[0])}"/>` : `<div class="card-img-placeholder">🐾</div>`;
+  if(!list.length){
+    grid.innerHTML='<p style="padding:20px; color:gray; font-size:13px;">Нічого не знайдено за заданими фільтрами</p>';
+    if(_listingsSentinelObserver){ _listingsSentinelObserver.disconnect(); _listingsSentinelObserver = null; }
+    return;
+  }
+
+  const visibleList = list.slice(0, listingsRenderLimit);
+
+  grid.innerHTML = visibleList.map(([id,l])=>{
+    const img = l.photos?.[0] ? `<img loading="lazy" src="${escapeHtml(l.photos[0])}"/>` : `<div class="card-img-placeholder">🐾</div>`;
     const userStrikes = allUsers[l.ownerUid]?.strikes || 0;
     const strikeBadge = userStrikes > 0 ? `<div class="strike-badge">⚠️ ${escapeHtml(userStrikes)}</div>` : '';
     const avg = getAverageRating(l);
@@ -1040,6 +1204,24 @@ function renderListings(){
       </div>
     </div>`;
   }).join('');
+
+  // Інфініт-скрол: якщо оголошень більше, ніж вже показано, підвантажуємо ще
+  // 15-25 наступних, щойно користувач долистав до кінця стрічки — щоб не
+  // рендерити й не грузити фото всіх оголошень одразу.
+  if(_listingsSentinelObserver){ _listingsSentinelObserver.disconnect(); _listingsSentinelObserver = null; }
+  if(list.length > listingsRenderLimit){
+    const sentinel = document.createElement('div');
+    sentinel.id = 'listingsSentinel';
+    sentinel.style.cssText = 'grid-column:1/-1;height:1px;';
+    grid.appendChild(sentinel);
+    _listingsSentinelObserver = new IntersectionObserver((entries)=>{
+      if(entries[0] && entries[0].isIntersecting){
+        listingsRenderLimit += nextListingsLoadMoreCount();
+        renderListings();
+      }
+    });
+    _listingsSentinelObserver.observe(sentinel);
+  }
 }
 
 window.openDetail = function(id){
@@ -1070,7 +1252,7 @@ window.openDetail = function(id){
   if(!revsHTML) revsHTML = '<p style="color:gray; font-size:12px;">Відгуків ще немає. Будь першим!</p>';
 
   body.innerHTML = `
-    <div class="gallery-main">${l.photos?.[0]?`<img src="${escapeHtml(l.photos[0])}"/>`:''}</div>
+    <div class="gallery-main">${l.photos?.[0]?`<img loading="lazy" src="${escapeHtml(l.photos[0])}"/>`:''}</div>
     <div class="listing-detail-price">${escapeHtml(l.price)} грн/год</div>
     <div class="listing-detail-desc">${escapeHtml(l.desc||'Без опису')}</div>
     <p style="font-size:14px; margin-bottom:12px;"><b>Власник:</b> @${escapeHtml(l.owner)}</p>
@@ -1218,6 +1400,15 @@ function renderChatList(){
 window.deleteChatForMe = async function(chatId) {
   if(confirm('Видалити цей чат для себе?')) {
     await set(ref(db, `chats/${chatId}/deletedBy/${currentUser.uid}`), true);
+
+    // Якщо всі учасники чату вже позначили його як видалений для себе, чат більше
+    // нікому не потрібен — видаляємо запис повністю з Realtime Database, щоб він
+    // не залишався "сміттям" назавжди.
+    const snap = await get(ref(db, `chats/${chatId}`));
+    const chat = snap.val();
+    if(chat && chat.participants && chat.participants.every(uid => chat.deletedBy && chat.deletedBy[uid])) {
+      await remove(ref(db, `chats/${chatId}`));
+    }
   }
 };
 
@@ -1248,24 +1439,21 @@ window.sendMsg = async function(){
   input.value='';
 };
 
-window.previewAdPhotos = function(e) {
+window.previewAdPhotos = async function(e) {
   adPhotosData = [];
   const preview = document.getElementById('adPhotosPreview');
   preview.innerHTML = '';
   const files = Array.from(e.target.files).slice(0, 10);
-  files.forEach(f => {
-    if(!f.type || !f.type.startsWith('image/')){ alert(`Файл "${f.name}" не є зображенням і буде пропущено.`); return; }
-    if(f.size > MAX_PHOTO_BYTES){ alert(`Фото "${f.name}" завелике (максимум ${MAX_PHOTO_BYTES/1024/1024} МБ) і буде пропущено.`); return; }
-    const r = new FileReader();
-    r.onload = () => {
-      adPhotosData.push(r.result);
-      const img = document.createElement('img');
-      img.src = r.result;
-      img.style.cssText = 'width:50px; height:50px; object-fit:cover; border-radius:6px;';
-      preview.appendChild(img);
-    };
-    r.readAsDataURL(f);
-  });
+  for(const f of files){
+    if(!f.type || !f.type.startsWith('image/')){ alert(`Файл "${f.name}" не є зображенням і буде пропущено.`); continue; }
+    if(f.size > MAX_PHOTO_BYTES){ alert(`Фото "${f.name}" завелике (максимум ${MAX_PHOTO_BYTES/1024/1024} МБ) і буде пропущено.`); continue; }
+    const dataUrl = await compressImageFile(f);
+    adPhotosData.push(dataUrl);
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    img.style.cssText = 'width:50px; height:50px; object-fit:cover; border-radius:6px;';
+    preview.appendChild(img);
+  }
 };
 
 window.previewAdVideo = function(e) {
@@ -1347,8 +1535,8 @@ function renderAds(){
     let mediaContent = '';
     if((a.photos && a.photos.length > 0) || a.video) {
       mediaContent = `<div class="ad-media-container">`;
-      if(a.video) mediaContent += `<video src="${escapeHtml(a.video)}" controls></video>`;
-      if(a.photos) a.photos.forEach(img => { mediaContent += `<img src="${escapeHtml(img)}"/>`; });
+      if(a.video) mediaContent += `<video src="${escapeHtml(a.video)}" preload="none" controls></video>`;
+      if(a.photos) a.photos.forEach(img => { mediaContent += `<img loading="lazy" src="${escapeHtml(img)}"/>`; });
       mediaContent += `</div>`;
     }
     const safeLink = sanitizeUrl(a.link);
@@ -1502,15 +1690,12 @@ window.previewPhotos = async function(e){
   for(const f of e.target.files){
     if(!f.type || !f.type.startsWith('image/')){ alert(`Файл "${f.name}" не є зображенням і буде пропущено.`); continue; }
     if(f.size > MAX_PHOTO_BYTES){ alert(`Фото "${f.name}" завелике (максимум ${MAX_PHOTO_BYTES/1024/1024} МБ) і буде пропущено.`); continue; }
-    const r = new FileReader();
-    r.onload = () => {
-      newPhotos.push(r.result);
-      const img = document.createElement('img');
-      img.src = r.result;
-      img.style.cssText = 'width:45px;height:45px;object-fit:cover;border-radius:6px';
-      grid.appendChild(img);
-    };
-    r.readAsDataURL(f);
+    const dataUrl = await compressImageFile(f);
+    newPhotos.push(dataUrl);
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    img.style.cssText = 'width:45px;height:45px;object-fit:cover;border-radius:6px';
+    grid.appendChild(img);
   }
 };
 
