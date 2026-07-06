@@ -1024,10 +1024,10 @@ let _listenersActive = false;
 
 // Адмін-панель: список користувачів оновлюється при КОЖНІЙ зміні у вузлі 'Users'
 // (а це відбувається дуже часто — щоразу, коли будь-який онлайн-користувач шле
-// heartbeat). Обмежуємо реальний перерендер адмін-списку до одного разу на 15
+// heartbeat). Обмежуємо реальний перерендер адмін-списку до одного разу на 10
 // секунд — свіжіші дані все одно вже лежать у allUsers, просто DOM не смикається
 // щосекунди.
-const ADMIN_PANEL_MIN_INTERVAL_MS = 15000;
+const ADMIN_PANEL_MIN_INTERVAL_MS = 10000;
 let _adminPanelLastRenderAt = 0;
 let _adminPanelPendingTimer = null;
 function scheduleAdminPanelRender(){
@@ -1044,11 +1044,22 @@ function scheduleAdminPanelRender(){
   }
 }
 
+// Коли адмін сам щойно видав покарання (страйк/бан/розбан), результат має бути
+// видно швидко — через 1 секунду, а не чекати звичайні 10с "тихого" оновлення.
+function forceAdminPanelRenderSoon(){
+  if(_adminPanelPendingTimer){ clearTimeout(_adminPanelPendingTimer); }
+  _adminPanelPendingTimer = setTimeout(()=>{
+    _adminPanelPendingTimer = null;
+    _adminPanelLastRenderAt = Date.now();
+    renderAdminPanel();
+  }, 1000);
+}
+
 // Нове/змінене оголошення не обов'язково показувати миттєво в стрічці — невелика
 // затримка (3-5с) дозволяє згладити перерендер DOM, якщо кілька змін приходять
 // одна за одною. Перше завантаження стрічки після входу лишається миттєвим, щоб
 // користувач одразу бачив контент, а не порожній екран.
-const LISTINGS_UPDATE_DEBOUNCE_MS = 4000;
+const LISTINGS_UPDATE_DEBOUNCE_MS = 1000;
 let _listingsFirstLoadDone = false;
 let _listingsDebounceTimer = null;
 
@@ -1653,6 +1664,7 @@ window.adminGiveStrike = async function(uid, currentStrikes){
     updates.banReason = "Автоматичне блокування за 3 страйки. " + (reason || '');
   }
   await update(ref(db, 'Users/' + uid), updates);
+  forceAdminPanelRenderSoon();
   alert('Страйк видано!');
 };
 
@@ -1666,8 +1678,10 @@ window.adminBanPrompt = async function(uid) {
     if(isNaN(days) || days < 1 || days > 365) return;
     const banUntilTimestamp = Date.now() + (days * 24 * 60 * 60 * 1000);
     await update(ref(db, 'Users/' + uid), { banUntil: banUntilTimestamp, banReason: reason || 'Не вказана', banned: false });
+    forceAdminPanelRenderSoon();
   } else if(type === '2') {
     await update(ref(db, 'Users/' + uid), { banned: true, banUntil: null, banReason: reason || 'Не вказана' });
+    forceAdminPanelRenderSoon();
   }
 };
 
@@ -1677,6 +1691,7 @@ window.adminUnban = async function(uid) {
       banned: false, banUntil: null, strikes: 0, banReason: null, 
       strikeAlert: true, strikeType: 'unban', strikeReason: `З тебе знято всі обмеження та страйки! Можеш продовжувати роботу.` 
     });
+    forceAdminPanelRenderSoon();
   }
 };
 
